@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cómo Enviar Datos de un CSV a Telegram con Google Apps Script</title>
+    <style>
+        body {
+            background-color: #2c2c2c;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .container {
+            background-color: #4a4a4a;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            margin-top: 20px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .responsive-image {
+            display: block;
+            margin: 0 auto;
+            max-width: 80%;
+            height: auto;
+        }
+        .code-container {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #2cd0e1;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cómo Enviar Datos de un CSV a Telegram</h1>
+    <div class="container">
+        <p>Se puede consultar por datos dentro de un CSV alojado en Google Drive y enviarlo 
+          por Telegram, mediante el uso de Google Apps Script y Telegram Bot API.</p>
+        <ul>
+            <li><strong>Subir el CSV a Google Drive:</strong> 
+              Guarda el archivo CSV en Google Drive y anota su ID.El ID del archivo es la 
+              parte entre /d/ y /view.</li>
+            <li><strong>Leer el CSV desde Google Apps Script:</strong> Usa 
+              <code>DriveApp</code> para acceder al archivo y 
+              <code>Utilities.parseCsv()</code> para procesarlo.</li>
+            <li><strong>Crear un Bot en Telegram:</strong> Ya tienes un bot y su token.</li>
+            <li><strong>Configurar un Webhook en Google Apps Script:</strong>
+                <ul>
+                    <li>Usar <code>doPost(e)</code> para recibir mensajes.</li>
+                    <li>Buscar la palabra en el CSV.</li>
+                    <li>Enviar la respuesta a Telegram.</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div class="container">
+        <img src="Img/Nivel_001.jpg" alt="Descripción de la imagen" class="responsive-image">
+    </div>
+    <div class="container">
+        <p>El siguiente código recibe mensajes de Telegram, busca coincidencias en un CSV y 
+          responde con los resultados.</p>
+        <div class="code-container" id="code1">
+            <button class="copy-button" onclick="copyCode('code1')">Copiar</button>
+            <pre><code>function doPost(e) {
+    var token = "TU_TOKEN_DE_TELEGRAM"; 
+    var fileId = "1YHsMu1HmAAsJfc4KzwF90gK3_aMd16Ks";
+    var api = "https://api.telegram.org/bot";
+
+    var mensaje_telegram = JSON.parse(e.postData.contents);
+    var chatId = mensaje_telegram.message.chat.id;
+    var mensaje = removerTildes(mensaje_telegram.message.text.toLowerCase());
+
+    var respuesta = buscarEnCSV(fileId, mensaje);
+
+    var url = api + token + "/sendMessage";
+    var payload = {
+        "chat_id": chatId,
+        "text": respuesta
+    };
+
+    var options = {
+        "method": "post",
+        "contentType": "application/json",
+        "payload": JSON.stringify(payload)
+    };
+
+    UrlFetchApp.fetch(url, options);
+}
+
+function buscarEnCSV(fileId, textoBuscado) {
+    var file = DriveApp.getFileById(fileId);
+    var csv = Utilities.parseCsv(file.getBlob().getDataAsString());
+    
+    var palabrasClave = textoBuscado.split(" ");
+    var coincidencias = [];
+    var maxCoincidencias = 7;
+
+    for (var i = 0; i &lt; csv.length; i++) {
+        var fila = removerTildes(csv[i].join(" ").toLowerCase());
+        var todasCoinciden = palabrasClave.every(palabra => fila.includes(palabra));
+
+        if (todasCoinciden) {
+            coincidencias.push(csv[i].join(" | "));
+            if (coincidencias.length >= maxCoincidencias) break;
+        }
+    }
+    return coincidencias.length > 0 
+        ? "Resultados encontrados:\n" + coincidencias.join("\n") 
+        : "No se encontraron resultados.";
+}
+
+function removerTildes(texto) {
+    return texto.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}</code></pre>
+        </div>
+    </div>
+  
+    <div class="container">
+        <ul><li>Copia el código en Google Apps Script en 
+              <a href="https://script.google.com/home" target="_blank" style="color: #2cd0e1">
+                script.google.com/home</a></li></ul>
+            <ul><li>Publicar el script:
+                <ul><li>Ir a Implementar → Implementación nueva.</li>
+                    <li>Elegir Aplicación web y permitir acceso a "Cualquiera".</li></ul>
+            </li></ul>
+      <img src="Img/01_App-Script.jpg" alt="Descripción de la imagen" class="responsive-image">
+      <ul><li>Con la siguiente URL <u>HABILITA</u> el Webhook en Telegram, como respuesta web
+        obtendras al ejecutar una confirmación de que el webhook se configuró correctamente 
+        y que Telegram ahora enviará los mensajes al script de Google Apps Script.
+                <br><code>https://api.telegram.org/bot<code style="color: #2cd0e1">TU_TOKEN_DE_TELEGRAM</code>/setWebhook?url=<code style="color: #2cd0e1">TU_URL_DEL_SCRIPT</code></code>
+            </li></ul>
+      <img src="Img/02_App-Script.jpg" alt="Descripción de la imagen" class="responsive-image">
+      
+      <ul><li>Con la siguiente URL <u>DESHABILITA</u> el Webhook en Telegram, este enlace solo se usara si hay alguna modificación en el codigo y se necesite desestimar el webhook.
+        <br><code>https://api.telegram.org/bot<code style="color: #2cd0e1">YOUR_BOT_TOKEN</code>/deleteWebhook</code>
+        </li></ul>
+      <img src="Img/03_App-Script.jpg" alt="Descripción de la imagen" class="responsive-image">
+    </div>
+  
+  <div class="container">
+        <p>Ahora el script necesita una primera ejecución manual para solicitar los 
+          permisos necesarios. Posteriormente debería funcionar automáticamente cada vez 
+          que el bot reciba un mensaje en Telegram.</p>
+    <img src="Img/04_App-Script.jpg" alt="Descripción de la imagen" class="responsive-image">
+  </div>
+  
+    <script>
+        function copyCode(containerId) {
+            const codeContainer = document.getElementById(containerId);
+            const code = codeContainer.querySelector('pre code').textContent;
+            navigator.clipboard.writeText(code)
+                .then(() => alert("Código copiado con éxito"))
+                .catch(err => console.error("Error al copiar el código: ", err));}
+    </script>
+</body>
+</html>
